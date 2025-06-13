@@ -1,23 +1,25 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePotholeStore } from '../store/potholeStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const Analytics = () => {
-  const { potholes } = usePotholeStore();
+  const { potholes, loggingEnabled } = usePotholeStore();
+
+  // Only use potholes if logging is enabled
+  const statsPotholes = loggingEnabled ? potholes : [];
 
   // Generate chart data
   const severityData = [
-    { name: 'Low', count: potholes.filter(p => p.severity === 'low').length, color: '#FCD34D' },
-    { name: 'Medium', count: potholes.filter(p => p.severity === 'medium').length, color: '#F97316' },
-    { name: 'High', count: potholes.filter(p => p.severity === 'high').length, color: '#EF4444' }
+    { name: 'Low', count: statsPotholes.filter(p => p.severity === 'low').length, color: '#FCD34D' },
+    { name: 'Medium', count: statsPotholes.filter(p => p.severity === 'medium').length, color: '#F97316' },
+    { name: 'High', count: statsPotholes.filter(p => p.severity === 'high').length, color: '#EF4444' }
   ];
 
   const hourlyData = Array.from({ length: 24 }, (_, hour) => {
     const hoursAgo = new Date();
     hoursAgo.setHours(hoursAgo.getHours() - (23 - hour));
-    const count = potholes.filter(p => {
+    const count = statsPotholes.filter(p => {
       const potholeTime = new Date(p.timestamp);
       return potholeTime.getHours() === hoursAgo.getHours();
     }).length;
@@ -27,6 +29,15 @@ const Analytics = () => {
       detections: count
     };
   });
+
+  const getPotholePositionString = (pothole) => {
+    if (typeof pothole.position.x === 'number' && typeof pothole.position.y === 'number') {
+      return `${pothole.position.x.toFixed(1)}, ${pothole.position.y.toFixed(1)}`;
+    } else if (typeof pothole.position.lat === 'number' && typeof pothole.position.lng === 'number') {
+      return `${pothole.position.lat.toFixed(5)}, ${pothole.position.lng.toFixed(5)}`;
+    }
+    return '';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
@@ -45,45 +56,53 @@ const Analytics = () => {
               <CardTitle className="text-white">Severity Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={severityData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="name" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
-                      border: '1px solid #374151',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Bar dataKey="count" fill="#06B6D4" />
-                </BarChart>
-              </ResponsiveContainer>
+              {loggingEnabled ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={severityData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="name" stroke="#9CA3AF" />
+                    <YAxis stroke="#9CA3AF" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1F2937', 
+                        border: '1px solid #374151',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Bar dataKey="count" fill="#06B6D4" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-gray-400 text-center py-12">Logging is disabled. No statistics available.</div>
+              )}
             </CardContent>
           </Card>
 
           {/* Hourly Detections */}
-          <Card className="bg-black/20 border-purple-500/30 backdrop-blur-md">
+          <Card className="bg-black/20 border-cyan-500/30 backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-white">24-Hour Detection Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={hourlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="hour" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
-                      border: '1px solid #374151',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Line type="monotone" dataKey="detections" stroke="#8B5CF6" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              {loggingEnabled ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={hourlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="hour" stroke="#9CA3AF" />
+                    <YAxis stroke="#9CA3AF" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1F2937', 
+                        border: '1px solid #374151',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Line type="monotone" dataKey="detections" stroke="#8B5CF6" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-gray-400 text-center py-12">Logging is disabled. No statistics available.</div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -96,7 +115,7 @@ const Analytics = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-cyan-400">
-                {potholes.length > 0 ? (potholes.reduce((sum, p) => sum + p.depth, 0) / potholes.length).toFixed(1) : '0'} cm
+                {loggingEnabled && statsPotholes.length > 0 ? (statsPotholes.reduce((sum, p) => sum + p.depth, 0) / statsPotholes.length).toFixed(1) : '0'} cm
               </div>
               <p className="text-gray-400 text-sm">Across all detections</p>
             </CardContent>
@@ -108,7 +127,9 @@ const Analytics = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-orange-400">
-                {(potholes.length / Math.max(1, Math.ceil((Date.now() - (potholes[0]?.timestamp ? new Date(potholes[0].timestamp).getTime() : Date.now())) / (1000 * 60 * 60)))).toFixed(1)}
+                {loggingEnabled && statsPotholes.length > 0 ?
+                  (statsPotholes.length / Math.max(1, Math.ceil((Date.now() - (statsPotholes[0]?.timestamp ? new Date(statsPotholes[0].timestamp).getTime() : Date.now())) / (1000 * 60 * 60)))).toFixed(1)
+                  : '0'}
               </div>
               <p className="text-gray-400 text-sm">Potholes per hour</p>
             </CardContent>
@@ -133,38 +154,42 @@ const Analytics = () => {
             <CardTitle className="text-white">Detailed Detection Log</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-cyan-400 pb-2">Time</th>
-                    <th className="text-cyan-400 pb-2">Position</th>
-                    <th className="text-cyan-400 pb-2">Severity</th>
-                    <th className="text-cyan-400 pb-2">Depth</th>
-                    <th className="text-cyan-400 pb-2">Impact</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {potholes.slice(-10).reverse().map((pothole) => (
-                    <tr key={pothole.id} className="border-b border-gray-800">
-                      <td className="text-white py-2">{new Date(pothole.timestamp).toLocaleTimeString()}</td>
-                      <td className="text-white py-2">{pothole.position.x.toFixed(1)}, {pothole.position.y.toFixed(1)}</td>
-                      <td className="py-2">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          pothole.severity === 'high' ? 'bg-red-500 text-white' :
-                          pothole.severity === 'medium' ? 'bg-orange-500 text-white' :
-                          'bg-yellow-500 text-black'
-                        }`}>
-                          {pothole.severity.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="text-white py-2">{pothole.depth.toFixed(1)} cm</td>
-                      <td className="text-white py-2">{pothole.accelerometer.magnitude.toFixed(2)}g</td>
+            {loggingEnabled ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-cyan-400 pb-2">Time</th>
+                      <th className="text-cyan-400 pb-2">Position</th>
+                      <th className="text-cyan-400 pb-2">Severity</th>
+                      <th className="text-cyan-400 pb-2">Depth</th>
+                      <th className="text-cyan-400 pb-2">Impact</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {statsPotholes.slice(-10).reverse().map((pothole) => (
+                      <tr key={pothole.id} className="border-b border-gray-800">
+                        <td className="text-white py-2">{new Date(pothole.timestamp).toLocaleTimeString()}</td>
+                        <td className="text-white py-2">{getPotholePositionString(pothole)}</td>
+                        <td className="py-2">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            pothole.severity === 'high' ? 'bg-red-500 text-white' :
+                            pothole.severity === 'medium' ? 'bg-orange-500 text-white' :
+                            'bg-yellow-500 text-black'
+                          }`}>
+                            {pothole.severity.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="text-white py-2">{pothole.depth.toFixed(1)} cm</td>
+                        <td className="text-white py-2">{pothole.accelerometer.magnitude.toFixed(2)}g</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-gray-400 text-center py-12">Logging is disabled. No detection log available.</div>
+            )}
           </CardContent>
         </Card>
       </div>

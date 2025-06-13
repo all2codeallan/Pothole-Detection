@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { usePotholeStore } from '../../store/potholeStore';
+import { Switch } from '@/components/ui/switch';
 
 export const PotholePanel = () => {
-  const { potholes, clearPotholes } = usePotholeStore();
+  const { potholes, clearPotholes, loggingEnabled, setLoggingEnabled, resetStatistics } = usePotholeStore();
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
 
   const filteredPotholes = potholes.filter(p => 
@@ -21,17 +21,42 @@ export const PotholePanel = () => {
   };
 
   const stats = {
-    total: potholes.length,
-    high: potholes.filter(p => p.severity === 'high').length,
-    medium: potholes.filter(p => p.severity === 'medium').length,
-    low: potholes.filter(p => p.severity === 'low').length,
+    total: loggingEnabled ? potholes.length : 0,
+    high: loggingEnabled ? potholes.filter(p => p.severity === 'high').length : 0,
+    medium: loggingEnabled ? potholes.filter(p => p.severity === 'medium').length : 0,
+    low: loggingEnabled ? potholes.filter(p => p.severity === 'low').length : 0,
+  };
+
+  const getPotholePositionString = (pothole) => {
+    if (typeof pothole.position.x === 'number' && typeof pothole.position.y === 'number') {
+      return `${pothole.position.x.toFixed(1)}, ${pothole.position.y.toFixed(1)}`;
+    } else if (typeof pothole.position.lat === 'number' && typeof pothole.position.lng === 'number') {
+      return `${pothole.position.lat.toFixed(5)}, ${pothole.position.lng.toFixed(5)}`;
+    }
+    return '';
   };
 
   return (
     <div className="space-y-4">
+      {/* Logging Controls */}
+      <Card className="p-4 flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <span className="text-white font-medium">Enable Logging</span>
+          <Switch checked={loggingEnabled} onCheckedChange={setLoggingEnabled} />
+        </div>
+        <button
+          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold ml-4"
+          onClick={resetStatistics}
+        >
+          Reset Statistics
+        </button>
+      </Card>
       {/* Statistics */}
       <Card className="p-4">
         <h3 className="text-lg font-semibold text-white mb-3">Detection Summary</h3>
+        {!loggingEnabled && (
+          <div className="text-gray-400 text-center mb-2">Logging is disabled. No statistics available.</div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 p-3 rounded-lg">
             <div className="text-2xl font-bold text-cyan-400">{stats.total}</div>
@@ -100,7 +125,7 @@ export const PotholePanel = () => {
                   </span>
                 </div>
                 <div className="text-xs text-gray-400 space-y-1">
-                  <div>Position: {pothole.position.x.toFixed(1)}, {pothole.position.y.toFixed(1)} cm</div>
+                  <div>Position: {getPotholePositionString(pothole)}</div>
                   <div>Depth: {pothole.depth}cm | Impact: {pothole.accelerometer.magnitude.toFixed(2)}g</div>
                 </div>
               </div>

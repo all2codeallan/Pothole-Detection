@@ -1,4 +1,3 @@
-
 declare global {
   interface Window {
     google: typeof google;
@@ -126,6 +125,57 @@ declare global {
 
       class MVCArray<T> {
         push(elem: T): number;
+      }
+
+      // --- Directions API Types ---
+      class DirectionsService {
+        route(
+          request: DirectionsRequest,
+          callback: (result: DirectionsResult, status: string) => void
+        ): void;
+      }
+      class DirectionsRenderer {
+        setMap(map: Map | null): void;
+        setDirections(result: DirectionsResult): void;
+      }
+      interface DirectionsRequest {
+        origin: LatLng | LatLngLiteral | string;
+        destination: LatLng | LatLngLiteral | string;
+        travelMode: string;
+      }
+      interface DirectionsResult {
+        routes: Array<{
+          overview_path: LatLng[];
+        }>;
+      }
+      var TravelMode: {
+        DRIVING: string;
+        WALKING: string;
+        BICYCLING: string;
+        TRANSIT: string;
+      };
+      var DirectionsStatus: {
+        OK: string;
+        NOT_FOUND: string;
+        ZERO_RESULTS: string;
+        // ...etc
+      };
+      namespace geometry {
+        namespace spherical {
+          function computeDistanceBetween(a: LatLng, b: LatLng): number;
+        }
+      }
+
+      // Add MapMouseEvent type
+      class MapMouseEvent {
+        latLng: LatLng;
+        constructor(latLng: LatLng);
+      }
+
+      // Add event namespace for event removal and addListener
+      namespace event {
+        function removeListener(listener: any): void;
+        function addListener(instance: any, eventName: string, handler: Function): any;
       }
     }
   }

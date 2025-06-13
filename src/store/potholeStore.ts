@@ -59,6 +59,7 @@ interface PotholeStore {
   rcCarPosition: Position;
   carTrail: Position[];
   mapConfig: MapConfig;
+  loggingEnabled: boolean;
 
   // Actions
   connect: () => void;
@@ -76,6 +77,8 @@ interface PotholeStore {
   stopDemo: () => void;
   resetDemo: () => void;
   initializeSystem: () => void;
+  setLoggingEnabled: (enabled: boolean) => void;
+  resetStatistics: () => void;
 }
 
 export const usePotholeStore = create<PotholeStore>((set, get) => ({
@@ -101,73 +104,75 @@ export const usePotholeStore = create<PotholeStore>((set, get) => ({
     gpsCenter: { lat: 12.9716, lng: 77.5946 },
     calibrationPoints: [],
   },
+  loggingEnabled: true,
 
   // Actions
   connect: () => {
     set({ isConnected: true });
-    get().addAlert({
+    setTimeout(() => get().addAlert({
       type: 'success',
       title: 'Connected to ThingSpeak',
       message: 'Real-time data streaming active'
-    });
+    }), 0);
   },
 
   disconnect: () => {
     set({ isConnected: false, isDetecting: false });
-    get().addAlert({
+    setTimeout(() => get().addAlert({
       type: 'info',
       title: 'Disconnected from ThingSpeak',
       message: 'Data streaming stopped'
-    });
+    }), 0);
   },
 
   setDemoMode: (mode: boolean) => {
     set({ demoMode: mode });
-    get().addAlert({
+    setTimeout(() => get().addAlert({
       type: 'info',
       title: `Switched to ${mode ? 'Demo' : 'Production'} Mode`,
       message: mode ? 'Using cardboard track simulation' : 'Real-world mapping active'
-    });
+    }), 0);
   },
 
   startDetection: () => {
     if (get().isConnected) {
       set({ isDetecting: true });
-      get().addAlert({
+      setTimeout(() => get().addAlert({
         type: 'success',
         title: 'Detection Started',
         message: 'Monitoring for potholes...'
-      });
+      }), 0);
     }
   },
 
   stopDetection: () => {
     set({ isDetecting: false });
-    get().addAlert({
+    setTimeout(() => get().addAlert({
       type: 'info',
       title: 'Detection Stopped',
       message: 'Monitoring paused'
-    });
+    }), 0);
   },
 
   addPothole: (pothole: Pothole) => {
+    if (!get().loggingEnabled) return;
     set(state => ({
       potholes: [...state.potholes, pothole]
     }));
-    get().addAlert({
+    setTimeout(() => get().addAlert({
       type: 'warning',
       title: `${pothole.severity.toUpperCase()} Severity Pothole Detected`,
-      message: `Position: ${pothole.position.x.toFixed(1)}, ${pothole.position.y.toFixed(1)} cm`
-    });
+      message: `Position: ${getPotholePositionString(pothole.position)}`
+    }), 0);
   },
 
   clearPotholes: () => {
     set({ potholes: [] });
-    get().addAlert({
+    setTimeout(() => get().addAlert({
       type: 'info',
       title: 'All Potholes Cleared',
       message: 'Detection history reset'
-    });
+    }), 0);
   },
 
   addAlert: (alert: Omit<Alert, 'id' | 'timestamp'>) => {
@@ -225,11 +230,11 @@ export const usePotholeStore = create<PotholeStore>((set, get) => ({
       if (newProgress >= 100) {
         set({ demoProgress: 100, isDemoRunning: false });
         clearInterval(demoInterval);
-        get().addAlert({
+        setTimeout(() => get().addAlert({
           type: 'success',
           title: 'Demo Completed',
           message: 'Demo simulation finished successfully'
-        });
+        }), 0);
         return;
       }
 
@@ -341,4 +346,19 @@ export const usePotholeStore = create<PotholeStore>((set, get) => ({
     // Start simulation interval
     setInterval(simulateData, 100); // 10 Hz update rate
   },
+
+  setLoggingEnabled: (enabled: boolean) => set({ loggingEnabled: enabled }),
+
+  resetStatistics: () => {
+    set({ potholes: [] });
+  },
 }));
+
+function getPotholePositionString(position: any): string {
+  if (typeof position.x === 'number' && typeof position.y === 'number') {
+    return `${position.x.toFixed(1)}, ${position.y.toFixed(1)}`;
+  } else if (typeof position.lat === 'number' && typeof position.lng === 'number') {
+    return `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`;
+  }
+  return '';
+}
